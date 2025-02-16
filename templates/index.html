@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Insn</title>
+  <!-- Favicon with letter "I" -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3EI%3C/text%3E%3C/svg%3E">
+  <!-- Tailwind via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Import Raleway font -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Raleway:200">
+  <!-- Force-graph library (if needed) -->
+  <script src="//unpkg.com/force-graph"></script>
+  <!-- Include D3 v3 for the force–directed graph -->
+  <script src="https://d3js.org/d3.v3.min.js"></script>
+  <style>
+    :root {
+      --bg-color: #FAFAFA;
+      --panel-bg: white;
+      --panel-bg-alt: #f9f9f9;
+      --graph-bg: #FAFAFA;
+      --text-color: #222;
+      --placeholder-color: #777;
+      --dot-color: #444;
+      --dot-highlight-color: rgba(0, 0, 0, 0.2);
+      --edge-faint-color: rgba(0,0,0,0.1);
+      --edge-strong-color: rgba(0,0,0,0.8);
+    }
+    .dark-mode {
+      --bg-color: #1E1E1E;
+      --panel-bg: rgba(34, 34, 34, 0.9);
+      --panel-bg-alt: rgba(34, 34, 34, 0.8);
+      --graph-bg: #1E1E1E;
+      --text-color: #EFEFEF;
+      --placeholder-color: #AAA;
+      --dot-color: #E6E6E6;
+      --dot-highlight-color: rgba(230,230,230,0.25);
+      --edge-faint-color: rgba(255,255,255,0.03);
+      --edge-strong-color: rgba(255,255,255,0.8);
+    }
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+    body {
+      font-family: ui-sans-serif, -apple-system, system-ui, 'Segoe UI', 'Helvetica Neue', sans-serif, 'Segoe UI Emoji', 'Segoe UI Symbol';
+      background: var(--bg-color);
+      position: relative;
+      overflow: hidden;
+    }
+    /* Global animated shining border around the graph area */
+    body::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      border: 5px solid transparent;
+      border-image: linear-gradient(45deg, rgba(255,0,0,0.3), rgba(0,255,0,0.3), rgba(0,0,255,0.3));
+      border-image-slice: 1;
+      animation: borderShine 5s linear infinite;
+      z-index: 9999;
+    }
+    @keyframes borderShine {
+      0% { border-image-source: linear-gradient(45deg, rgba(255,0,0,0.3), rgba(0,255,0,0.3), rgba(0,0,255,0.3)); }
+      50% { border-image-source: linear-gradient(45deg, rgba(0,255,0,0.3), rgba(0,0,255,0.3), rgba(255,0,0,0.3)); }
+      100% { border-image-source: linear-gradient(45deg, rgba(255,0,0,0.3), rgba(0,255,0,0.3), rgba(0,0,255,0.3)); }
+    }
+    /* ---------------------------
+       Icon Buttons – Animated Changing Gradient
+    --------------------------- */
+    .icon-button {
+      width: 40px;
+      height: 40px;
+      padding: 8px;
+      background: linear-gradient(to right, rgba(99,102,241,0.2), rgba(168,85,247,0.2), rgba(236,72,153,0.2));
+      background-size: 300% 100%;
+      border-radius: 9999px;
+      animation: buttonGradient 4s ease infinite;
+      transition: all 0.4s ease-in-out;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .small-icon-button {
+      width: 36px;
+      height: 36px;
+      padding: 6px;
+    }
+    .icon-button:hover {
+      background: linear-gradient(to right, rgba(255,99,71,0.3), rgba(65,105,225,0.3), rgba(60,179,113,0.3));
+      background-size: 300% 100%;
+      animation: buttonHoverGradient 4s ease infinite;
+      transform: scale(1.05);
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+    }
+    @keyframes buttonGradient {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    @keyframes buttonHoverGradient {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    /* ---------------------------
+       Graph Container
+    --------------------------- */
+    #graphContainer {
+      position: relative;
+      height: 100%;
+      background: linear-gradient(45deg, rgba(220,220,220,0.05), rgba(180,180,180,0.05));
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    /* Ensure the SVG is behind the icons */
+    #graphSVG {
+      z-index: 1;
+    }
+    /* ---------------------------
+       Paper Panel (Right Panel) – using version 2 style
+       (Width increased 30% from 400px to 520px)
+    --------------------------- */
+    #paperPanelWrapper {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 520px;
+      height: 100%;
+      padding: 3px;
+      background: linear-gradient(60deg, #f79533, #f37055, #ef4e7b, #a166ab, #5073b8, #1098ad, #07b39b, #6fba82);
+      border-radius: 8px;
+      animation: animatedgradient 20s linear alternate infinite;
+      background-size: 300% 300%;
+      box-sizing: border-box;
+      transition: transform 0.3s ease;
+      z-index: 100;
+    }
+    #paperPanelWrapper.closed {
+      transform: translateX(100%);
+    }
+    #paperPanelInner {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(180deg, var(--panel-bg), var(--panel-bg-alt));
+      border-radius: 5px;
+      padding: 20px;
+      overflow-y: auto;
+      box-sizing: border-box;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.1);
+    }
+    @keyframes animatedgradient {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    /* ---------------------------
+       Favorites Popup
+    --------------------------- */
+    #favoritesPopup {
+      transition: transform 0.3s ease;
+      max-height: 80vh;
+      overflow-y: auto;
+      position: fixed;
+      background: linear-gradient(90deg,
+                  rgba(252,68,237,0.1) 0%,
+                  rgba(246,255,183,0.1) 30%,
+                  rgba(150,239,255,0.1) 67%,
+                  rgba(124,255,117,0.1) 100%);
+      background-size: 1000%;
+      animation: favoritesBgAnim 20s linear alternate infinite;
+      border: 2px solid transparent;
+      border-image-slice: 1;
+      border-image: linear-gradient(45deg,
+                  rgba(252,68,237,0.1),
+                  rgba(246,255,183,0.1),
+                  rgba(150,239,255,0.1),
+                  rgba(124,255,117,0.1)) 1;
+      z-index: 50;
+    }
+    @keyframes favoritesBgAnim {
+      from { background-position: 0% 50%; }
+      to { background-position: 100% 50%; }
+    }
+    #favoritesPopup #closeFavorites {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 24px;
+      height: 24px;
+    }
+    /* ---------------------------
+       Top Center Message
+    --------------------------- */
+    #topMessage {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.75);
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 4px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+      z-index: 1000;
+      font-size: 0.9rem;
+    }
+    /* ---------------------------
+       Random Paper Overlay
+    --------------------------- */
+    #randomPaperOverlay {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 6px 12px;
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+      border-radius: 4px;
+      opacity: 0;
+      transition: opacity 1s ease;
+      pointer-events: none;
+      font-size: 0.85rem;
+      z-index: 40;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+    }
+    /* ---------------------------
+       Top Left: Dark Mode Toggle
+    --------------------------- */
+    #darkModeIcon {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 50;
+    }
+    /* ---------------------------
+       Top Right Icons Container
+    --------------------------- */
+    #topRightIcons {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      gap: 10px;
+      z-index: 100;
+    }
+    /* ---------------------------
+       Save Button & Paper Navigation
+    --------------------------- */
+    #saveFavorite {
+      display: none;
+    }
+    #paperNav {
+      display: none;
+      margin-top: 10px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    /* ---------------------------
+       Favorites List and Followed Authors List
+    --------------------------- */
+    #favoritesList, #followedAuthorsList {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    /* ---------------------------
+       Hover Animation for Clickable Elements
+    --------------------------- */
+    .clickable {
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .clickable:hover {
+      transform: scale(1.02);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    /* ---------------------------
+       Tooltip for Node Hover
+    --------------------------- */
+    #nodeTooltip {
+      position: absolute;
+      pointer-events: none;
+      background: rgba(255,255,255,0.9);
+      color: #000;
+      padding: 4px 8px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      font-size: 12px;
+      display: none;
+      z-index: 200;
+    }
+    /* ---------------------------
+       Resizable Panel Handle
+    --------------------------- */
+    .resize-handle {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 8px;
+      height: 100%;
+      cursor: ew-resize;
+      z-index: 100;
+      transition: background-color 0.2s;
+    }
+    .resize-handle:hover {
+      background-color: rgba(0, 0, 0, 0.1);
+    }
+  </style>
+</head>
+<body class="w-full h-full text-[var(--text-color)] overflow-hidden">
+  <!-- Top Center Message -->
+  <div id="topMessage"></div>
+  <!-- Tooltip for Node Hover -->
+  <div id="nodeTooltip"></div>
+  <!-- Graph Container -->
+  <div id="graphContainer">
+    <!-- Using an SVG for the D3 force–directed graph -->
+    <svg id="graphSVG" class="absolute top-0 left-0 w-full h-full"></svg>
+    <!-- Top Left: Dark Mode Toggle -->
+    <div id="darkModeIcon" class="icon-button" title="Toggle dark mode"></div>
+    <!-- Top Right Icons -->
+    <div id="topRightIcons">
+      <div id="notificationIcon" class="icon-button" title="Notifications"></div>
+      <div id="favoritesButton" class="icon-button" title="Favorites"></div>
+      <div id="togglePanelButton" class="icon-button" title="Toggle Panel"></div>
+    </div>
+    <div id="randomPaperOverlay"></div>
+  </div>
+  <!-- Paper Panel Wrapper (Right Panel) -->
+  <div id="paperPanelWrapper">
+    <div id="paperPanelInner">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div id="saveFavorite" class="icon-button small-icon-button" title="Save Favorite"></div>
+        <div id="paperNav">
+          <div id="prevPaper" class="icon-button small-icon-button"></div>
+          <div id="nextPaper" class="icon-button small-icon-button"></div>
+        </div>
+      </div>
+      <div id="paperTitle" class="text-lg font-bold mb-2"></div>
+      <div id="paperAuthors" class="text-sm italic mb-2"></div>
+      <div id="paperAbstract" class="text-sm leading-relaxed mb-4 text-justify"></div>
+      <div id="paperExtras" class="text-sm mb-4"></div>
+      <div id="similarList" class="text-sm mt-2"></div>
+    </div>
+    <div id="panelHandle" class="resize-handle"></div>
+  </div>
+  <!-- Favorites Popup -->
+  <div id="favoritesPopup" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[400px] p-5 hidden z-50 backdrop-blur-sm">
+    <button id="closeFavorites" class="icon-button" title="Close">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M17 7L7 17M7 7L17 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <h2 class="text-base mb-2 lowercase clickable">favorite.</h2>
+    <h3 class="text-base mb-2 lowercase clickable">favorite papers.</h3>
+    <div id="favoritesList" class="text-sm"></div>
+    <h3 class="text-base mb-2 mt-4 lowercase clickable">followed authors.</h3>
+    <div id="followedAuthorsList" class="text-sm"></div>
+  </div>
+  <!-- Chat Interface -->
+  <div id="chatContainer" class="absolute bottom-[25%] left-1/2 transform -translate-x-1/2 w-[calc((100% - 520px) * 0.75)] text-center z-50 bg-transparent p-0">
+    <div id="typedResponse" class="text-base mb-2 min-h-[24px] whitespace-pre-wrap"></div>
+    <input type="text" id="chatInput" placeholder="type your prompt and press enter..."
+           class="w-full text-base bg-transparent border-0 text-[var(--text-color)] text-center outline-none" style="display:none;"/>
+  </div>
+  <!-- JavaScript -->
+  <script>
+    /********************
+       GLOBAL VARIABLES & PANEL STATE
+    ********************/
+    let panelOpen = true,
+        panelManuallyClosed = false,
+        panelWidth = 520; // updated to 520px
+    let papers = []; // will be loaded via fetch
+    let selectedPaperIndex = -1; // currently selected paper
+    let hoveredPaperIndex = -1;  // current hovered paper (if any)
+
+    /********************
+       ICONS SETUP
+    ********************/
+    const darkModeSVG = `<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M15 16.5V19C15 19.9319 15 20.3978 14.8478 20.7654C14.6448 21.2554 14.2554 21.6448 13.7654 21.8478C13.3978 22 12.9319 22 12 22C11.0681 22 10.6022 22 10.2346 21.8478C9.74458 21.6448 9.35523 21.2554 9.15224 20.7654C9 20.3978 9 19.9319 9 19V16.5M15 16.5C17.6489 15.3427 19.5 12.5755 19.5 9.5C19.5 5.35786 16.1421 2 12 2C7.85786 2 4.5 5.35786 4.5 9.5C4.5 12.5755 6.35114 15.3427 9 16.5M15 16.5H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+    const lightModeSVG = `<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M10 17.6586V20C10 21.1046 10.8954 22 12 22C13.1046 22 14 21.1046 14 20V17.6586M12 2V3M3 12H2M5.5 5.5L4.8999 4.8999M18.5 5.5L19.1002 4.8999M22 12H21M18 12C18 15.3137 15.3137 18 12 18C8.68629 18 6 15.3137 6 12C6 8.68629 8.68629 6 12 6C15.3137 6 18 8.68629 18 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+    const isDark = document.body.classList.contains('dark-mode');
+    document.getElementById('darkModeIcon').innerHTML = isDark ? lightModeSVG : darkModeSVG;
+    const notificationsSVG = `<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M9.35419 21C10.0593 21.6224 10.9856 22 12 22C13.0145 22 13.9407 21.6224 14.6458 21M18 8C18 6.4087 17.3679 4.88258 16.2427 3.75736C15.1174 2.63214 13.5913 2 12 2C10.4087 2 8.8826 2.63214 7.75738 3.75736C6.63216 4.88258 6.00002 6.4087 6.00002 8C6.00002 11.0902 5.22049 13.206 4.34968 14.6054C3.61515 15.7859 3.24788 16.3761 3.26134 16.5408C3.27626 16.7231 3.31488 16.7926 3.46179 16.9016C3.59448 17 4.19261 17 5.38887 17H18.6112C19.8074 17 20.4056 17 20.5382 16.9016C20.6852 16.7926 20.7238 16.7231 20.7387 16.5408C20.7522 16.3761 20.3849 15.7859 19.6504 14.6054C18.7795 13.206 18 11.0902 18 8Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+    document.getElementById('notificationIcon').innerHTML = notificationsSVG;
+    const favoritesSVG = `<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M4.5 22V17M4.5 7V2M2 4.5H7M2 19.5H7M13 3L11.2658 7.50886C10.9838 8.24209 10.8428 8.60871 10.6235 8.91709C10.4292 9.1904 10.1904 9.42919 9.91709 9.62353C9.60871 9.84281 9.24209 9.98381 8.50886 10.2658L4 12L8.50886 13.7342C9.24209 14.0162 9.60871 14.1572 9.91709 14.3765C10.1904 14.5708 10.4292 14.8096 10.6235 15.0829C10.8428 15.3913 10.9838 15.7579 11.2658 16.4911L13 21L14.7342 16.4911C15.0162 15.7579 15.1572 15.3913 15.3765 15.0829C15.5708 14.8096 15.8096 14.5708 16.0829 14.3765C16.3913 14.1572 16.7579 14.0162 17.4911 13.7342L22 12L17.4911 10.2658C16.7579 9.98381 16.3913 9.8428 16.0829 9.62353C15.8096 9.42919 15.5708 9.1904 15.3765 8.91709C15.1572 8.60871 15.0162 8.24209 14.7342 7.50886L13 3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+    document.getElementById('favoritesButton').innerHTML = favoritesSVG;
+    const unsaveSVG = `<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M5 7.8C5 6.11984 5 5.27976 5.32698 4.63803C5.6146 4.07354 6.07354 3.6146 6.63803 3.32698C7.27976 3 8.11984 3 9.8 3H14.2C15.8802 3 16.7202 3 17.362 3.32698C17.9265 3.6146 18.3854 4.07354 18.673 4.63803C19 5.27976 19 6.11984 19 7.8V21L12 17L5 21V7.8Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+    const saveSuccessfulSVG = `<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M9 10.5L11 12.5L15.5 8M19 21V7.8C19 6.11984 19 5.27976 18.673 4.63803C18.3854 4.07354 17.9265 3.6146 17.362 3.32698C16.7202 3 15.8802 3 14.2 3H9.8C8.11984 3 7.27976 3 6.63803 3.32698C6.07354 3.6146 5.6146 4.07354 5.32698 4.63803C5 5.27976 5 6.11984 5 7.8V21L12 17L19 21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+    document.getElementById('saveFavorite').innerHTML = unsaveSVG;
+
+    function getUserFollowSVG() {
+      return `<svg style="width:16px; height:16px;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 15.5H7.5C6.10444 15.5 5.40665 15.5 4.83886 15.6722C3.56045 16.06 2.56004 17.0605 2.17224 18.3389C2 18.9067 2 19.6044 2 21M19 21V15M16 18H22M14.5 7.5C14.5 9.98528 12.4853 12 10 12C7.51472 12 5.5 9.98528 5.5 7.5C5.5 5.01472 7.51472 3 10 3C12.4853 3 14.5 5.01472 14.5 7.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>`;
+    }
+    function getUserFollowedSVG() {
+      return `<svg style="width:16px; height:16px;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 15.5H7.5C6.10444 15.5 5.40665 15.5 4.83886 15.6722C3.56045 16.06 2.56004 17.0605 2.17224 18.3389C2 18.9067 2 19.6044 2 21M16 18L18 20L22 16M14.5 7.5C14.5 9.98528 12.4853 12 10 12C7.51472 12 5.5 9.98528 5.5 7.5C5.5 5.01472 7.51472 3 10 3C12.4853 3 14.5 5.01472 14.5 7.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>`;
+    }
+    function getUserUnfollowSVG() {
+      return `<svg style="width:16px; height:16px;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 15.5H7.5C6.10444 15.5 5.40665 15.5 4.83886 15.6722C3.56045 16.06 2.56004 17.0605 2.17224 18.3389C2 18.9067 2 19.6044 2 21M16 18L19 21M19 21L22 18M19 21V15M14.5 7.5C14.5 9.98528 12.4853 12 10 12C7.51472 12 5.5 9.98528 5.5 7.5C5.5 5.01472 7.51472 3 10 3C12.4853 3 14.5 5.01472 14.5 7.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>`;
+    }
+
+    /********************
+       PANEL TOGGLE BUTTON
+    ********************/
+    const chevronRightSVG = `<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+    const chevronLeftSVG = `<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+    const togglePanelButton = document.getElementById('togglePanelButton');
+    togglePanelButton.innerHTML = chevronLeftSVG;
+    function updateToggleButtonPosition() { /* position update if needed */ }
+    updateToggleButtonPosition();
+
+    /********************
+       PAPER NAVIGATION BUTTONS
+    ********************/
+    const nextSVG = `<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M21 12L14 5V9H3.8C3.51997 9 3.37996 9 3.273 9.0545C3.17892 9.10243 3.10243 9.17892 3.0545 9.273C3 9.37996 3 9.51997 3 9.8V14.2C3 14.48 3 14.62 3.0545 14.727C3.10243 14.8211 3.17892 14.8976 3.273 14.9455C3.37996 15 3.51997 15 3.8 15H14V19L21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+    const prevSVG = `<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M3 12L10 5V9H20.2C20.48 9 20.62 9 20.727 9.0545C20.8211 9.10243 20.8976 9.17892 20.9455 9.273C21 9.37996 21 9.51997 21 9.8V14.2C21 14.48 21 14.62 20.9455 14.727C20.8976 14.8211 20.8211 14.8976 20.727 14.9455C20.62 15 20.48 15 20.2 15H10V19L3 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`;
+    const prevBtn = document.getElementById('prevPaper');
+    const nextBtn = document.getElementById('nextPaper');
+    prevBtn.innerHTML = prevSVG;
+    nextBtn.innerHTML = nextSVG;
+
+    /********************
+       TOP MESSAGE FUNCTION
+    ********************/
+    function showTopMessage(message, duration = 2000) {
+      const topMessage = document.getElementById('topMessage');
+      topMessage.textContent = message;
+      topMessage.style.opacity = 1;
+      setTimeout(() => { topMessage.style.opacity = 0; }, duration);
+    }
+
+    /********************
+       PAPER INFO PANEL
+    ********************/
+    const paperTitle = document.getElementById('paperTitle');
+    const paperAuthors = document.getElementById('paperAuthors');
+    const paperAbstract = document.getElementById('paperAbstract');
+    const paperExtras = document.getElementById('paperExtras');
+    const similarList = document.getElementById('similarList');
+    let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
+    let followedAuthors = JSON.parse(localStorage.getItem('followedAuthors')) || [];
+    function showPaperInfo(p) {
+      selectedPaperIndex = p.id;  // update global selected paper id
+      openPanel();
+      document.getElementById('saveFavorite').style.display = 'block';
+      document.getElementById('paperNav').style.display = 'flex';
+      document.getElementById('favoritesButton').style.display = 'block';
+      paperTitle.innerHTML = `<a class="clickable" href="${p.link}" target="_blank">${p.title}</a>`;
+      paperAuthors.innerHTML = p.authors.split(', ').map(name => {
+        const isFollowed = followedAuthors.includes(name);
+        const followIcon = isFollowed ? getUserFollowedSVG() : getUserFollowSVG();
+        return `<a class="clickable" href="https://scholar.google.com/scholar?q=${encodeURIComponent(name)}" target="_blank">${name}</a>
+                <span class="follow-author icon-button clickable" data-author="${name}" title="${isFollowed ? 'Unfollow' : 'Follow'}">
+                  ${followIcon}
+                </span>`;
+      }).join(', ');
+      paperAbstract.textContent = p.abstract;
+      paperExtras.innerHTML = `citations: ${p.citations} | cited in: ${p.citedIn}`;
+      similarList.innerHTML = '';
+      if (p.similar && p.similar.length) {
+        const label = document.createElement('div');
+        label.textContent = 'similar papers:';
+        label.classList.add('clickable');
+        label.style.marginBottom = '5px';
+        label.style.textTransform = 'lowercase';
+        similarList.appendChild(label);
+        p.similar.forEach(idx => {
+          const sp = papers[idx];
+          const div = document.createElement('div');
+          div.textContent = sp.title;
+          div.className = 'favorite-item clickable';
+          div.onclick = () => {
+            showPaperInfo(sp);
+            selectedPaperIndex = sp.id;
+            highlightClickedNode(sp.id);
+          };
+          similarList.appendChild(div);
+        });
+      }
+    }
+    document.addEventListener('click', e => {
+      const followBtn = e.target.closest('.follow-author');
+      if (followBtn) {
+        const authorName = followBtn.getAttribute('data-author');
+        if (!followedAuthors.includes(authorName)) {
+          followedAuthors.push(authorName);
+          localStorage.setItem('followedAuthors', JSON.stringify(followedAuthors));
+          followBtn.setAttribute('title', 'Unfollow');
+          followBtn.innerHTML = getUserFollowedSVG();
+          showTopMessage(`Now following ${authorName}`);
+        } else {
+          followedAuthors = followedAuthors.filter(name => name !== authorName);
+          localStorage.setItem('followedAuthors', JSON.stringify(followedAuthors));
+          followBtn.setAttribute('title', 'Follow');
+          followBtn.innerHTML = getUserFollowSVG();
+          showTopMessage(`Unfollowed ${authorName}`);
+        }
+        e.stopPropagation();
+      }
+    });
+
+    /********************
+       SAVE BUTTON FUNCTIONALITY
+    ********************/
+    document.getElementById('saveFavorite').onclick = () => {
+      let currentPaper = papers.find(p => p.id === selectedPaperIndex);
+      if (currentPaper) {
+        const index = favorites.findIndex(fav => fav.id === currentPaper.id);
+        if (index === -1) {
+          favorites.push(currentPaper);
+          localStorage.setItem('favorites', JSON.stringify(favorites));
+          document.getElementById('saveFavorite').innerHTML = saveSuccessfulSVG;
+          showTopMessage('Paper added to favorites.');
+        } else {
+          favorites.splice(index, 1);
+          localStorage.setItem('favorites', JSON.stringify(favorites));
+          document.getElementById('saveFavorite').innerHTML = unsaveSVG;
+          showTopMessage('Paper removed from favorites.');
+        }
+      }
+    };
+
+    /********************
+       PAPER NAVIGATION (Prev/Next)
+    ********************/
+    prevBtn.onclick = () => {
+      // Navigation among search results (if implemented)
+    };
+    nextBtn.onclick = () => {
+      // Navigation among search results (if implemented)
+    };
+    document.addEventListener('keydown', e => {
+      if (e.key === "ArrowLeft") { prevBtn.click(); }
+      else if (e.key === "ArrowRight") { nextBtn.click(); }
+    });
+
+    /********************
+       FAVORITES POPUP FUNCTIONALITY
+    ********************/
+    const favoritesPopup = document.getElementById('favoritesPopup');
+    const favoritesList = document.getElementById('favoritesList');
+    const followedAuthorsList = document.getElementById('followedAuthorsList');
+    document.getElementById('favoritesButton').addEventListener('click', () => {
+      updateFavoritesPopup();
+      favoritesPopup.style.display = 'block';
+    });
+    document.getElementById('closeFavorites').addEventListener('click', () => {
+      favoritesPopup.style.display = 'none';
+    });
+    function updateFavoritesPopup() {
+      favoritesList.innerHTML = '';
+      followedAuthorsList.innerHTML = '';
+      if (favorites.length === 0) {
+        favoritesList.textContent = 'no favorite papers saved.';
+      } else {
+        favorites.forEach(fav => {
+          const div = document.createElement('div');
+          div.className = 'favorite-item clickable';
+          div.textContent = fav.title;
+          div.onclick = () => { window.open(fav.link, '_blank'); };
+          favoritesList.appendChild(div);
+        });
+      }
+      if (followedAuthors.length === 0) {
+        followedAuthorsList.textContent = 'no authors followed.';
+      } else {
+        followedAuthors.forEach(author => {
+          const div = document.createElement('div');
+          div.className = 'followed-item clickable';
+          div.textContent = author;
+          div.onclick = () => { window.open(`https://scholar.google.com/scholar?q=${encodeURIComponent(author)}`, '_blank'); };
+          followedAuthorsList.appendChild(div);
+        });
+      }
+    }
+
+    /********************
+       CHAT & ADVANCED SEARCH
+    ********************/
+    const chatContainer = document.getElementById('chatContainer');
+    const chatInput = document.getElementById('chatInput');
+    const typedResponse = document.getElementById('typedResponse');
+    let chatActive = false;
+    chatInput.addEventListener('focus', () => {
+      document.getElementById('graphContainer').style.filter = "blur(2px)";
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === "Enter" && !chatActive) {
+        e.preventDefault();
+        chatActive = true;
+        chatInput.style.display = "block";
+        chatInput.focus();
+      }
+    });
+    chatInput.addEventListener('keydown', e => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const userMsg = chatInput.value.trim();
+        if (!userMsg) {
+          chatActive = false;
+          chatInput.style.display = "none";
+          typedResponse.innerHTML = "";
+          document.getElementById('graphContainer').style.filter = "none";
+          return;
+        }
+        chatInput.value = "";
+        document.getElementById('graphContainer').style.filter = "none";
+        if (userMsg.startsWith('?')) {
+          const question = userMsg.slice(1).trim();
+          fetch('/api/llm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paperId: selectedPaperIndex, prompt: question })
+          })
+          .then(response => response.json())
+          .then(result => { showBotResponse(result.response, selectedPaperIndex); })
+          .catch(err => console.error("LLM error:", err));
+        } else {
+          fetch('/api/query', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: userMsg, activePaperId: selectedPaperIndex })
+          })
+          .then(response => response.json())
+          .then(result => {
+            showBotResponse("Search results displayed.", selectedPaperIndex);
+          })
+          .catch(err => console.error("Query error:", err));
+        }
+      }
+    });
+    function showBotResponse(responseText, paperId) {
+      const botMsg = `[LLM]: ${responseText}`;
+      typeText(botMsg, typedResponse, 25, () => { typedResponse.innerHTML += '<span class="cursor"></span>'; });
+    }
+    function typeText(text, element, speed, onComplete) {
+      element.textContent = "";
+      let i = 0;
+      (function step() {
+        element.textContent = text.slice(0, i + 1);
+        i++;
+        if (i < text.length) { setTimeout(step, speed); }
+        else { if (onComplete) onComplete(); }
+      })();
+    }
+
+    /********************
+       TOGGLE DARK/LIGHT MODE
+    ********************/
+    const toggleMode = document.getElementById('darkModeIcon');
+    toggleMode.onclick = () => {
+      document.body.classList.toggle('dark-mode');
+      const isDarkMode = document.body.classList.contains('dark-mode');
+      toggleMode.innerHTML = isDarkMode ? lightModeSVG : darkModeSVG;
+    };
+
+    /********************
+       PANEL RESIZE & TOGGLE
+    ********************/
+    const panelHandle = document.getElementById('panelHandle');
+    let isResizing = false;
+    panelHandle.addEventListener('mousedown', () => { isResizing = true; });
+    document.addEventListener('mousemove', e => {
+      if (!isResizing) return;
+      let newWidth = window.innerWidth - e.clientX;
+      newWidth = Math.max(200, Math.min(800, newWidth));
+      panelWidth = newWidth;
+      document.getElementById('paperPanelWrapper').style.width = panelWidth + 'px';
+    });
+    document.addEventListener('mouseup', () => { isResizing = false; });
+    togglePanelButton.onclick = () => {
+      panelOpen = !panelOpen;
+      if (panelOpen) {
+        document.getElementById('paperPanelWrapper').classList.remove('closed');
+        togglePanelButton.innerHTML = chevronLeftSVG;
+      } else {
+        document.getElementById('paperPanelWrapper').classList.add('closed');
+        togglePanelButton.innerHTML = chevronRightSVG;
+      }
+      updateToggleButtonPosition();
+    };
+
+    /********************
+       D3 FORCE–DIRECTED GRAPH IMPLEMENTATION
+    ********************/
+    (function initForceGraph() {
+      const svg = d3.select("#graphSVG");
+      const container = document.getElementById("graphContainer");
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      const g = svg.append("g");
+
+      // Define one highlight gradient for edges
+      const defs = svg.append("defs");
+      const highlightGradient = defs.append("linearGradient")
+          .attr("id", "highlightGradient")
+          .attr("gradientUnits", "userSpaceOnUse");
+      highlightGradient.append("stop")
+          .attr("offset", "0%")
+          .attr("stop-color", "rgba(99,102,241,0.2)");
+      highlightGradient.append("stop")
+          .attr("offset", "50%")
+          .attr("stop-color", "rgba(168,85,247,0.2)");
+      highlightGradient.append("stop")
+          .attr("offset", "100%")
+          .attr("stop-color", "rgba(236,72,153,0.2)");
+
+      const force = d3.layout.force()
+                      .size([width, height])
+                      .gravity(0.05)
+                      .charge(-100)
+                      .linkDistance(100);
+
+      fetch('/api/papers')
+        .then(response => response.json())
+        .then(data => {
+          papers = data;
+          let links = [];
+          papers.forEach((p, i) => {
+            if (p.similar) {
+              p.similar.forEach(simIdx => {
+                links.push({ source: i, target: simIdx });
+              });
+            }
+          });
+
+          force.nodes(papers)
+               .links(links)
+               .start();
+
+          // Create links with default faint stroke
+          const link = g.selectAll(".link")
+                        .data(links)
+                        .enter().append("line")
+                        .attr("class", "link")
+                        .style("stroke", "rgba(0,0,0,0.1)")
+                        .style("stroke-width", "1");
+
+          const node = g.selectAll(".node")
+                        .data(papers)
+                        .enter().append("circle")
+                        .attr("class", "node")
+                        .attr("r", function(d) { return 5 + (d.citedIn || 0); })
+                        .style("fill", function(d, i) {
+                          const gray = 100 + (i % 155);
+                          return "rgb(" + gray + "," + gray + "," + gray + ")";
+                        })
+                        .style("opacity", function(d) {
+                          const currentYear = new Date().getFullYear();
+                          if (d.year) {
+                            let op = (d.year - 2000) / (currentYear - 2000);
+                            return Math.max(0.5, Math.min(1, op));
+                          }
+                          return 0.8;
+                        })
+                        .call(force.drag)
+                        .on("mouseover", function(d) {
+                          hoveredPaperIndex = d.id;
+                          d3.select(this)
+                            .transition().duration(300)
+                            .attr("r", (5 + (d.citedIn || 0)) + 5);
+                          d3.select("#nodeTooltip")
+                            .style("display", "block")
+                            .text(d.title);
+                        })
+                        .on("mousemove", function(d) {
+                          d3.select("#nodeTooltip")
+                            .style("left", (d3.event.pageX + 10) + "px")
+                            .style("top", (d3.event.pageY + 10) + "px");
+                        })
+                        .on("mouseout", function(d) {
+                          hoveredPaperIndex = -1;
+                          d3.select(this)
+                            .transition().duration(300)
+                            .attr("r", 5 + (d.citedIn || 0));
+                          d3.select("#nodeTooltip").style("display", "none");
+                        })
+                        .on("click", function(d) {
+                          showPaperInfo(d);
+                          selectedPaperIndex = d.id;
+                          d3.selectAll(".node").attr("stroke", null);
+                          d3.select(this).attr("stroke", "#f37055").attr("stroke-width", 3);
+                        });
+
+          force.on("tick", function() {
+            link.attr("x1", function(d) { return d.source.x; })
+                .attr("y1", function(d) { return d.source.y; })
+                .attr("x2", function(d) { return d.target.x; })
+                .attr("y2", function(d) { return d.target.y; });
+            node.attr("cx", function(d) { return d.x; })
+                .attr("cy", function(d) { return d.y; });
+
+            // Determine which node (hovered or selected) should have its similar edges highlighted
+            const currentHighlight = (hoveredPaperIndex !== -1) ? hoveredPaperIndex : selectedPaperIndex;
+            link.style("stroke", function(d) {
+              if (currentHighlight !== -1 && (d.source.id === currentHighlight || d.target.id === currentHighlight)) {
+                return "url(#highlightGradient)";
+              } else {
+                return "rgba(0,0,0,0.1)";
+              }
+            });
+          });
+
+          const zoom = d3.behavior.zoom()
+                         .scaleExtent([0.1, 10])
+                         .on("zoom", function() {
+                           g.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+                         });
+          svg.call(zoom);
+        })
+        .catch(err => { console.error("Error loading papers:", err); });
+    })();
+
+    function highlightClickedNode(id) {
+      d3.selectAll(".node").attr("stroke", null);
+      d3.selectAll(".node").filter(function(d) { return d.id === id; })
+        .attr("stroke", "#f37055")
+        .attr("stroke-width", 3);
+    }
+
+    function openPanel() {
+      if (!panelOpen) {
+        panelOpen = true;
+        document.getElementById('paperPanelWrapper').classList.remove('closed');
+        togglePanelButton.innerHTML = chevronLeftSVG;
+      }
+    }
+  </script>
+</body>
+</html>
