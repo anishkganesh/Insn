@@ -1,25 +1,27 @@
-Insn
+# Insn
 
 A quick start guide for running the Insn project.
 
-Requirements
+## Requirements
 
 Before running the project, ensure you have the following Python packages installed:
-	•	Flask
-	•	requests
-	•	faiss-cpu
-	•	numpy
-	•	sentence-transformers
-	•	arxiv
-	•	scikit-learn
 
-	Tip: It’s recommended to use a virtual environment to manage dependencies.
+- Flask
+- requests
+- faiss-cpu
+- numpy
+- sentence-transformers
+- arxiv
+- scikit-learn
 
-Installation
-	1.	Clone the repository:
+**Tip:** It’s recommended to use a virtual environment to manage dependencies.
 
-git clone <repository_url>
+## Installation
 
+1. **Clone the repository:**
+
+   ```bash
+   git clone <repository_url>
 
 	2.	Navigate to the project directory:
 
