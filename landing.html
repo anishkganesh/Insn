@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Insn – Next-Gen Research Network</title>
+  <!-- Tailwind via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Import Raleway font -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;700&display=swap" />
+  <style>
+    body {
+      font-family: 'Raleway', sans-serif;
+    }
+    /* Animated gradient background (and text/border) */
+    @keyframes gradientAnimation {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .gradient-text {
+      background: linear-gradient(90deg, #f79533, #f37055, #ef4e7b, #a166ab, #5073b8, #1098ad, #07b39b, #6fba82);
+      background-size: 200% 200%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: gradientAnimation 5s ease infinite;
+    }
+    .gradient-border {
+      border-width: 2px;
+      border-style: solid;
+      border-image-slice: 1;
+      border-image-source: linear-gradient(45deg, #f79533, #f37055, #ef4e7b, #a166ab, #5073b8, #1098ad, #07b39b, #6fba82);
+      animation: gradientAnimation 5s ease infinite;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+  <!-- Navigation -->
+  <nav class="w-full py-6 px-4 md:px-12 flex items-center justify-between">
+    <div class="text-2xl font-bold gradient-text">Insn</div>
+    <div class="space-x-6">
+      <a href="#features" class="hover:underline">Features</a>
+      <a href="#about" class="hover:underline">About</a>
+      <a href="#contact" class="hover:underline">Contact</a>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="flex flex-col items-center justify-center min-h-screen text-center px-4">
+    <h1 class="text-5xl md:text-7xl font-extrabold mb-6 gradient-text">
+      Revolutionize Your Research
+    </h1>
+    <p class="max-w-2xl text-lg mb-8">
+      Insn transforms academic research with dynamic, graph-based visualizations and AI-powered insights.
+      Discover hidden connections and stay ahead with real-time updates.
+    </p>
+    <!-- The button below links to your graph network (running on app.py) -->
+    <!-- index.html snippet -->
+  <a href="http://127.0.0.1:5000/" target="_blank"
+     class="px-8 py-4 rounded-full text-white font-semibold bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 transition transform hover:scale-105 shadow-lg">
+    Enter Insn
+  </a>
+  </section>
+
+  <!-- Features Section -->
+  <section id="features" class="py-16 bg-white">
+    <div class="max-w-5xl mx-auto px-4">
+      <h2 class="text-4xl font-bold text-center mb-12 gradient-text">Why Insn?</h2>
+      <div class="grid md:grid-cols-2 gap-12">
+        <!-- Feature 1 -->
+        <div class="p-6 rounded-lg gradient-border hover:shadow-xl transition">
+          <div class="flex items-center mb-4">
+            <!-- Search Icon (from Heroicons) -->
+            <svg class="w-8 h-8 text-indigo-500 mr-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m1.49-5.65a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <h3 class="text-2xl font-bold">Interactive Graph Visualization</h3>
+          </div>
+          <p>
+            Navigate a dynamic map of millions of academic papers, unveiling hidden relationships and emerging trends.
+          </p>
+        </div>
+        <!-- Feature 2 -->
+        <div class="p-6 rounded-lg gradient-border hover:shadow-xl transition">
+          <div class="flex items-center mb-4">
+            <!-- AI Icon -->
+            <svg class="w-8 h-8 text-purple-500 mr-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20 10 10 0 000-20z" />
+            </svg>
+            <h3 class="text-2xl font-bold">AI-Powered Insights</h3>
+          </div>
+          <p>
+            Get on-the-spot answers and deeper contextual understanding using our advanced language model tailored for academic research.
+          </p>
+        </div>
+        <!-- Feature 3 -->
+        <div class="p-6 rounded-lg gradient-border hover:shadow-xl transition">
+          <div class="flex items-center mb-4">
+            <!-- Refresh Icon -->
+            <svg class="w-8 h-8 text-pink-500 mr-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582M20 20v-5h-.581M4.582 9A9 9 0 1115 15.582" />
+            </svg>
+            <h3 class="text-2xl font-bold">Real-Time Updates</h3>
+          </div>
+          <p>
+            Stay current with daily ingestion of new research papers and personalized notifications designed for your interests.
+          </p>
+        </div>
+        <!-- Feature 4 -->
+        <div class="p-6 rounded-lg gradient-border hover:shadow-xl transition">
+          <div class="flex items-center mb-4">
+            <!-- Personalization Icon -->
+            <svg class="w-8 h-8 text-green-500 mr-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5.121 17.804A8 8 0 1118.36 7.64m-3.536 6.364h.01" />
+            </svg>
+            <h3 class="text-2xl font-bold">Tailored Experience</h3>
+          </div>
+          <p>
+            Enjoy custom research feeds, advanced filtering, and intuitive navigation that adapts to your scholarly pursuits.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- About Section -->
+  <section id="about" class="py-16 bg-gray-100">
+    <div class="max-w-4xl mx-auto px-4 text-center">
+      <h2 class="text-4xl font-bold mb-8 gradient-text">The Future of Research is Here</h2>
+      <p class="text-lg mb-6">
+        Traditional academic platforms force you to sift through endless lists and outdated information. Insn reinvents discovery by connecting you to the most relevant, up-to-date research using an immersive graph-based approach.
+      </p>
+      <p class="text-lg">
+        Experience seamless integration of AI, interactive visualizations, and personalized insights that empower you to explore, understand, and innovate.
+      </p>
+    </div>
+  </section>
+
+  <!-- Call-to-Action Section -->
+  <section class="py-16 bg-white">
+    <div class="max-w-4xl mx-auto text-center px-4">
+      <h2 class="text-4xl font-bold mb-8 gradient-text">Ready to Explore?</h2>
+      <a href="/app.py" target="_blank" class="inline-block px-10 py-4 rounded-full text-white font-semibold bg-gradient-to-r from-green-500 via-blue-500 to-purple-500 hover:from-green-600 hover:via-blue-600 hover:to-purple-600 transition transform hover:scale-105 shadow-xl">
+        Launch Insn Graph
+      </a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer id="contact" class="py-6 bg-gray-800 text-gray-300">
+    <div class="max-w-5xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center">
+      <p>&copy; 2025 Insn. All rights reserved.</p>
+      <div class="mt-4 md:mt-0 space-x-4">
+        <a href="#" class="hover:underline">Privacy Policy</a>
+        <a href="#" class="hover:underline">Terms of Service</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
