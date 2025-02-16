@@ -1,0 +1,7 @@
+Flask
+requests
+faiss-cpu
+numpy
+sentence-transformers
+arxiv
+scikit-learn
