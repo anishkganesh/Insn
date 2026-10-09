@@ -38,8 +38,8 @@ Python, Flask, NumPy, Sentence Transformers (`all-MiniLM-L6-v2`), FAISS, scikit-
 Create and activate a Python virtual environment before installing dependencies.
 
 ```bash
-git clone https://github.com/anishkganesh/Insn.git
-cd Insn
+git clone https://github.com/anishkganesh/insn-search.git
+cd insn-search
 python -m venv .venv
 pip install -r requirements.txt
 pip install beautifulsoup4 tqdm google-generativeai
