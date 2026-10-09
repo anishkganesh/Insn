@@ -1,5 +1,7 @@
 # Insn — semantic paper explorer
 
+[Demo video](https://www.youtube.com/watch?v=0hZhV7mirQE)
+
 A Flask research-paper prototype that fetches arXiv metadata, embeds titles and abstracts, searches a FAISS index, and presents a three-dimensional paper landscape.
 
 ## Overview
